@@ -1,9 +1,0 @@
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: template
-nodes:
-  - role: control-plane
-    extraPortMappings:
-      - hostPort: 30001
-        containerPort: 30001
-        protocol: TCP
