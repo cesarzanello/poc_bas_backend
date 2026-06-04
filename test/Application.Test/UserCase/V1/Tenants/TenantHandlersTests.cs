@@ -38,6 +38,7 @@ public class TenantHandlersTests
         Assert.NotEqual(Guid.Empty, createdId);
 
         notifications.Verify(x => x.BroadcastAsync(
+            expected.Id,
             "Tenant creado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "success",

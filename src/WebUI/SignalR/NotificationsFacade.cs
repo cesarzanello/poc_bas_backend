@@ -7,7 +7,7 @@ namespace WebUI.SignalR
     {
         private const string NotificationReceivedEvent = "notification-received";
 
-        public Task BroadcastAsync(string title, string message, string type = "info", CancellationToken cancellationToken = default, object? data = null)
+        public Task BroadcastAsync(Guid tenantId, string title, string message, string type = "info", CancellationToken cancellationToken = default, object? data = null)
         {
             var payload = new NotificationMessageDto
             {
@@ -17,7 +17,8 @@ namespace WebUI.SignalR
                 Data = data
             };
 
-            return notificationService.NotifyAllAsync(NotificationReceivedEvent, payload, cancellationToken);
+            var groupName = Hubs.NotificationsHub.GetTenantGroupName(tenantId);
+            return notificationService.NotifyGroupAsync(groupName, NotificationReceivedEvent, payload, cancellationToken);
         }
     }
 }

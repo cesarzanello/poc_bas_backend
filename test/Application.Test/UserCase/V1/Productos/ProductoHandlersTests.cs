@@ -54,6 +54,7 @@ public class ProductoHandlersTests
         Assert.NotEqual(Guid.Empty, createdId);
 
         notifications.Verify(x => x.BroadcastAsync(
+            expected.TenantId,
             "Producto creado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "success",
@@ -155,6 +156,7 @@ public class ProductoHandlersTests
         Assert.Equal(expected, result);
 
         notifications.Verify(x => x.BroadcastAsync(
+            expected.TenantId,
             "Producto actualizado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "info",
@@ -238,9 +240,10 @@ public class ProductoHandlersTests
 
         var productoId = Guid.NewGuid();
 
+        var tenantId = Guid.NewGuid();
         productos
-            .Setup(x => x.ExistsProductoAsync(productoId, cancellationToken))
-            .ReturnsAsync(true);
+            .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
+            .ReturnsAsync(new ProductoResponseDto { Id = productoId, TenantId = tenantId, Codigo = "P-01", Nombre = "N", Precio = 1 });
 
         productos
             .Setup(x => x.DeleteProductoAsync(productoId, cancellationToken))
@@ -252,6 +255,7 @@ public class ProductoHandlersTests
 
         productos.Verify(x => x.DeleteProductoAsync(productoId, cancellationToken), Times.Once);
         notifications.Verify(x => x.BroadcastAsync(
+            tenantId,
             "Producto eliminado",
             It.Is<string>(m => m.Contains(productoId.ToString())),
             "warning",
@@ -267,7 +271,7 @@ public class ProductoHandlersTests
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
-        productos.Setup(x => x.ExistsProductoAsync(productoId, cancellationToken)).ReturnsAsync(false);
+        productos.Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken)).ReturnsAsync((ProductoResponseDto?)null);
 
         var handler = new DeleteProductoHandler(productos.Object, notifications.Object);
 
