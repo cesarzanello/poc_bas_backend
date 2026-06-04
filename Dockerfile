@@ -1,7 +1,7 @@
 # Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuración y cómo Visual Studio usa este Dockerfile para compilar sus imágenes para una depuración más rápida.
 
 # Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
@@ -9,7 +9,7 @@ EXPOSE 8081
 
 
 # Esta fase se usa para compilar el proyecto de servicio
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/WebUI/WebUI.csproj", "src/WebUI/"]
@@ -30,7 +30,4 @@ RUN dotnet publish "./WebUI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:U
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-COPY src/WebUI/appsettings.yml ./appsettings.yml
-COPY src/WebUI/appsettings.Development.yml ./appsettings.Development.yml
-COPY src/WebUI/appsettings.Production.yml ./appsettings.Production.yml
-ENTRYPOINT ["dotnet", "WebUI.dll"] 
+ENTRYPOINT ["dotnet", "WebUI.dll"]
