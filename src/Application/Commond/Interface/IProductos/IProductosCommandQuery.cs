@@ -13,5 +13,9 @@ namespace Application.Commond.Interface.IProductos
         Task<ProductoResponseDto?> GetProductoByIdAsync(Guid productoId, CancellationToken cancellationToken = default);
 
         Task<IReadOnlyCollection<ProductoResponseDto>> GetProductosByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsProductoAsync(Guid productoId, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsCodigoForTenantAsync(Guid tenantId, string codigo, Guid excludeProductoId, CancellationToken cancellationToken = default);
     }
 }

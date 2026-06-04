@@ -1,6 +1,5 @@
-using Application.Commond.Interface.IProductos;
-using Application.Commond.Interface.ITenants;
 using Application.Commond.Interface;
+using Application.Commond.Interface.IProductos;
 using Application.Dtos;
 using Dapper;
 using Domain.Entities;
@@ -11,19 +10,12 @@ using System.Data;
 
 namespace Infrastructure.Service.SProductos
 {
-    public class ProductosCommandQuery(ApplicationDbContext dbContext, IUnitOfWork unitOfWork, ITenantsCommandQuery tenantsCommandQuery, ILogger<ProductosCommandQuery> logger) : IProductosCommandQuery
+    public class ProductosCommandQuery(ApplicationDbContext dbContext, IUnitOfWork unitOfWork, ILogger<ProductosCommandQuery> logger) : IProductosCommandQuery
     {
         public async Task<ProductoResponseDto> CreateProductoAsync(Guid productoId, CreateProductoRequestDto request, CancellationToken cancellationToken = default)
         {
             try
             {
-                var tenantExists = await tenantsCommandQuery.ExistsTenantAsync(request.TenantId, cancellationToken);
-                if (!tenantExists)
-                {
-                    logger.LogWarning("CreateProducto falló: tenant {TenantId} no existe.", request.TenantId);
-                    throw new KeyNotFoundException("No se encontró el tenant indicado.");
-                }
-
                 var producto = new Producto
                 {
                     Id = productoId,
@@ -57,20 +49,8 @@ namespace Infrastructure.Service.SProductos
             try
             {
                 var producto = await dbContext.Productos.FirstOrDefaultAsync(x => x.Id == productoId, cancellationToken);
-                if (producto is null)
-                {
-                    logger.LogWarning("UpdateProducto falló: producto {ProductoId} no existe.", productoId);
-                    throw new KeyNotFoundException("No se encontró el producto indicado.");
-                }
 
-                var codigoExists = await dbContext.Productos.AnyAsync(x => x.TenantId == producto.TenantId && x.Codigo == request.Codigo && x.Id != productoId, cancellationToken);
-                if (codigoExists)
-                {
-                    logger.LogWarning("UpdateProducto falló: código duplicado {Codigo} para tenant {TenantId}.", request.Codigo, producto.TenantId);
-                    throw new InvalidOperationException("Ya existe un producto con el mismo código para el tenant indicado.");
-                }
-
-                producto.Codigo = request.Codigo;
+                producto!.Codigo = request.Codigo;
                 producto.Nombre = request.Nombre;
                 producto.Precio = request.Precio;
 
@@ -97,13 +77,8 @@ namespace Infrastructure.Service.SProductos
             try
             {
                 var producto = await dbContext.Productos.FirstOrDefaultAsync(x => x.Id == productoId, cancellationToken);
-                if (producto is null)
-                {
-                    logger.LogWarning("DeleteProducto falló: producto {ProductoId} no existe.", productoId);
-                    throw new KeyNotFoundException("No se encontró el producto indicado.");
-                }
 
-                dbContext.Productos.Remove(producto);
+                dbContext.Productos.Remove(producto!);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
@@ -164,6 +139,34 @@ namespace Infrastructure.Service.SProductos
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error obteniendo productos del tenant {TenantId}", tenantId);
+                throw;
+            }
+        }
+
+        public async Task<bool> ExistsProductoAsync(Guid productoId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await dbContext.Productos.AnyAsync(x => x.Id == productoId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error validando existencia del producto {ProductoId}", productoId);
+                throw;
+            }
+        }
+
+        public async Task<bool> ExistsCodigoForTenantAsync(Guid tenantId, string codigo, Guid excludeProductoId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await dbContext.Productos.AnyAsync(
+                    x => x.TenantId == tenantId && x.Codigo == codigo && x.Id != excludeProductoId,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error validando cÃ³digo duplicado {Codigo} para tenant {TenantId}", codigo, tenantId);
                 throw;
             }
         }

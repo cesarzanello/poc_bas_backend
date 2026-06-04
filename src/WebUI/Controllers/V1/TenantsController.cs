@@ -15,17 +15,19 @@ namespace WebUI.Controllers.V1
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequestDto request, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(request.Nombre))
+            try
             {
-                return BadRequest("El nombre del tenant es obligatorio.");
+                var tenant = await Mediator.Send(new CreateTenant
+                {
+                    Nombre = request.Nombre
+                }, cancellationToken);
+
+                return CreatedAtAction(nameof(GetAllTenants), tenant);
             }
-
-            var tenant = await Mediator.Send(new CreateTenant
+            catch (ArgumentException ex)
             {
-                Nombre = request.Nombre.Trim()
-            }, cancellationToken);
-
-            return CreatedAtAction(nameof(GetAllTenants), tenant);
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet]
