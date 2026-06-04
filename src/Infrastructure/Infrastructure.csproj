@@ -9,20 +9,20 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.8" />
-    <PackageReference Include="MongoDB.Bson" Version="3.9.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.30.0" />
-    <PackageReference Include="Npgsql" Version="10.0.3" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
-    <PackageReference Include="Npgsql.NetTopologySuite" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Application\Application.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Service\SCaso1\" />
   </ItemGroup>
 
 </Project>

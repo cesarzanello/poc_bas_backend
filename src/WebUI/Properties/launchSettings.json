@@ -33,11 +33,16 @@
       "launchBrowser": true,
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
       "environmentVariables": {
-        "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HTTP_PORTS": "8080",
+        "ConnectionStrings__DefaultConnection": "Server=host.docker.internal,1433;Database=poc_bas;User Id=sa;Password=TuPasswordFuerte123!;TrustServerCertificate=True;Encrypt=False",
+        "MongoDb__ConnectionString": "mongodb://host.docker.internal:27017",
+        "MongoDb__DatabaseName": "poc_bas",
+        "MongoDb__TenantsCollectionName": "tenants"
       },
-      "publishAllPorts": true,
-      "useSSL": true
+      "publishAllPorts": false,
+      "httpPort": 8080,
+      "useSSL": false
     }
   },
   "$schema": "http://json.schemastore.org/launchsettings.json",

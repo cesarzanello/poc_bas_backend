@@ -4,9 +4,15 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=poc_bas;User Id=sa;Password=TuPasswordFuerte123!;TrustServerCertificate=True;Encrypt=False
+      - MongoDb__ConnectionString=mongodb://mongodb:27017
+      - MongoDb__DatabaseName=poc_bas
+      - MongoDb__TenantsCollectionName=tenants
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "8080"
-      - "8081"
+      - "8080:8080"
+      - "8081:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro

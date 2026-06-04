@@ -9,7 +9,7 @@
   <ItemGroup>
     <Folder Include="Commond\" />
     <Folder Include="Constants\" />
-    <Folder Include="Entities\" />
+    <Folder Include="Dtos\" />
     <Folder Include="Enums\" />
     <Folder Include="Exceptions\" />
   </ItemGroup>

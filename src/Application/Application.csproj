@@ -19,6 +19,7 @@
     <Folder Include="UserCase\V1\Caso1\Commond\Create\" />
     <Folder Include="UserCase\V1\Caso1\Commond\Delete\" />
     <Folder Include="UserCase\V1\Caso1\Commond\Update\" />
+    <Folder Include="UserCase\V1\Caso1\Queries\" />
   </ItemGroup>
 
 </Project>

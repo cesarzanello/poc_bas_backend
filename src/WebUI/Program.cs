@@ -1,6 +1,9 @@
 using Application.Boopstrap;
 using Application.Commond.Interface;
 using Infrastructure.Boopstrap;
+using Infrastructure.Persistence;
+using Infrastructure.Persistence.Mongo;
+using Microsoft.EntityFrameworkCore;
 using NetEscapades.Configuration.Yaml;
 using WebUI.Hubs;
 using WebUI.SignalR;
@@ -10,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddYamlFile("appsettings.yml", optional: false, reloadOnChange: true)
+    .AddYamlFile("appsettings.yml", optional: true, reloadOnChange: true)
     .AddYamlFile($"appsettings.{builder.Environment.EnvironmentName}.yml", optional: true, reloadOnChange: true);
 
 builder.Services.AddControllers();
@@ -27,14 +30,27 @@ builder.Services.AddCors(policy =>
 {
     policy.AddDefaultPolicy(options =>
     {
-        var origins = builder.Configuration.GetSection("CORS_Origins").Value;
-        options.WithOrigins(origins.Split(","));
+        var origins = builder.Configuration["CORS_Origins"] ?? "http://localhost:3000";
+        options.WithOrigins(origins.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
         options.AllowAnyHeader();
         options.AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
+var isRunningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+
+using (var scope = app.Services.CreateScope())
+{
+    var mongoInitializer = scope.ServiceProvider.GetRequiredService<MongoInitializer>();
+    await mongoInitializer.InitializeAsync();
+
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction() || app.Environment.EnvironmentName.Equals("Qa", StringComparison.OrdinalIgnoreCase))
@@ -43,7 +59,10 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction() || app.Env
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!isRunningInContainer)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 app.UseCors();
