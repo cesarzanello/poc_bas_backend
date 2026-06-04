@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using NetEscapades.Configuration.Yaml;
 
 namespace WebUI.Extensions
 {
@@ -10,7 +11,7 @@ namespace WebUI.Extensions
            bool optional = false,
            bool reloadOnChange = true)
         {
-            builder.Configuration.AddXmlFile(fileName, optional, reloadOnChange);
+            builder.Configuration.AddYamlFile(fileName, optional, reloadOnChange);
             return builder;
         }
     }

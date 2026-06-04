@@ -4,6 +4,11 @@ Logging:
     Microsoft: Warning
 
 ConnectionStrings:
-  DefaultConnection: "Server=.;Database=MiDb;User Id=sa;Password=MiPass;"
+  DefaultConnection: "Server=host.docker.internal,1433;Database=poc_bas;User Id=sa;Password=TuPasswordFuerte123!;TrustServerCertificate=True;Encrypt=False"
+
+MongoDb:
+  ConnectionString: "mongodb://host.docker.internal:27017"
+  DatabaseName: "poc_bas"
+  TenantsCollectionName: "tenants"
 
 CORS_Origins: "http://localhost:3000" 
