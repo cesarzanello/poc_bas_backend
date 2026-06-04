@@ -4,9 +4,12 @@ services:
     build:
       context: .
       dockerfile: src/WebUI/Dockerfile
+    restart: unless-stopped
     depends_on:
-      - sqlserver
-      - mongodb
+      sqlserver:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
 
   angular-front:
     image: poc-bas-frontend

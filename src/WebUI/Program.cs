@@ -44,13 +44,34 @@ var isRunningInContainer = string.Equals(
     "true",
     StringComparison.OrdinalIgnoreCase);
 
+const int startupRetries = 10;
+var startupDelay = TimeSpan.FromSeconds(3);
+
 using (var scope = app.Services.CreateScope())
 {
     var mongoInitializer = scope.ServiceProvider.GetRequiredService<MongoInitializer>();
-    await mongoInitializer.InitializeAsync();
+    await ExecuteWithRetryAsync(() => mongoInitializer.InitializeAsync(), startupRetries, startupDelay);
 
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await ExecuteWithRetryAsync(() => dbContext.Database.EnsureCreatedAsync(), startupRetries, startupDelay);
+}
+
+static async Task ExecuteWithRetryAsync(Func<Task> operation, int retries, TimeSpan delay)
+{
+    for (var attempt = 1; attempt <= retries; attempt++)
+    {
+        try
+        {
+            await operation();
+            return;
+        }
+        catch when (attempt < retries)
+        {
+            await Task.Delay(delay);
+        }
+    }
+
+    await operation();
 }
 
 // Configure the HTTP request pipeline.
