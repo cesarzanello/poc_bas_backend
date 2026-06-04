@@ -14,12 +14,15 @@ namespace Application.UserCase.V1.Tenants.Commands
     {
         public async Task<TenantResponseDto> Handle(CreateTenant request, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(request.Nombre))
+                throw new ArgumentException("El nombre del tenant es obligatorio.");
+
             var tenantId = Guid.NewGuid();
-            var tenant = await tenantsCommandQuery.CreateTenantAsync(tenantId, request.Nombre, cancellationToken);
+            var tenant = await tenantsCommandQuery.CreateTenantAsync(tenantId, request.Nombre.Trim(), cancellationToken);
 
             await notificationsFacade.BroadcastAsync(
                 "Tenant creado",
-                $"Se cre? el tenant {tenant.Nombre} ({tenant.Id}).",
+                $"Se creó el tenant {tenant.Nombre} ({tenant.Id}).",
                 "success",
                 cancellationToken);
 

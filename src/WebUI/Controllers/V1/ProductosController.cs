@@ -16,16 +16,6 @@ namespace WebUI.Controllers.V1
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateProducto([FromBody] CreateProductoRequestDto request, CancellationToken cancellationToken)
         {
-            if (request.TenantId == Guid.Empty)
-            {
-                return BadRequest("El tenantId es obligatorio.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Codigo) || string.IsNullOrWhiteSpace(request.Nombre))
-            {
-                return BadRequest("Código y nombre son obligatorios.");
-            }
-
             try
             {
                 var producto = await Mediator.Send(new CreateProducto
@@ -33,6 +23,10 @@ namespace WebUI.Controllers.V1
                     Request = request
                 }, cancellationToken);
                 return CreatedAtAction(nameof(GetProductoById), new { productoId = producto.Id }, producto);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -50,16 +44,6 @@ namespace WebUI.Controllers.V1
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateProducto(Guid productoId, [FromBody] UpdateProductoRequestDto request, CancellationToken cancellationToken)
         {
-            if (productoId == Guid.Empty)
-            {
-                return BadRequest("El productoId es obligatorio.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Codigo) || string.IsNullOrWhiteSpace(request.Nombre))
-            {
-                return BadRequest("Código y nombre son obligatorios.");
-            }
-
             try
             {
                 var producto = await Mediator.Send(new UpdateProducto
@@ -68,6 +52,10 @@ namespace WebUI.Controllers.V1
                     Request = request
                 }, cancellationToken);
                 return Ok(producto);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -109,7 +97,7 @@ namespace WebUI.Controllers.V1
             }, cancellationToken);
             if (producto is null)
             {
-                return NotFound("No se encontró el producto indicado.");
+                return NotFound("No se encontrÃ³ el producto indicado.");
             }
 
             return Ok(producto);

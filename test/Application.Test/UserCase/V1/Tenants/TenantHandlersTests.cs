@@ -44,6 +44,41 @@ public class TenantHandlersTests
             cancellationToken), Times.Once);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateTenantHandler_Should_Throw_ArgumentException_When_Nombre_Empty(string nombre)
+    {
+        var tenants = new Mock<ITenantsCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+
+        var handler = new CreateTenantHandler(tenants.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(new CreateTenant { Nombre = nombre }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateTenantHandler_Should_Trim_Nombre_Before_Persisting()
+    {
+        var tenants = new Mock<ITenantsCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+        var cancellationToken = new CancellationTokenSource().Token;
+
+        var expected = new TenantResponseDto { Id = Guid.NewGuid(), Nombre = "Tenant B" };
+
+        tenants
+            .Setup(x => x.CreateTenantAsync(It.IsAny<Guid>(), "Tenant B", cancellationToken))
+            .ReturnsAsync(expected);
+
+        var handler = new CreateTenantHandler(tenants.Object, notifications.Object);
+
+        var result = await handler.Handle(new CreateTenant { Nombre = "  Tenant B  " }, cancellationToken);
+
+        Assert.Equal(expected, result);
+        tenants.Verify(x => x.CreateTenantAsync(It.IsAny<Guid>(), "Tenant B", cancellationToken), Times.Once);
+    }
+
     [Fact]
     public async Task GetAllTenantsHandler_Should_Return_Items_And_Broadcast_Count()
     {
