@@ -1,0 +1,121 @@
+name: 🚀 Deploy to Production Kubernetes
+
+on:
+  pull_request:
+    types: [closed]
+ 
+permissions:
+  contents: write
+
+jobs:
+  deploy-production:
+    # Solo desplegar cuando el PR fue mergeado a main, o en push directo a main
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: [self-hosted, production]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Bump de versión PATCH automático por tags tipo x.y.z
+      - name: Bump patch version via GitHub Script
+        id: getver
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tagsResp = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              per_page: 100
+            });
+            const versions = tagsResp.data
+              .map(t => t.name.replace(/^v/, ''))
+              .filter(v => /^\d+\.\d+\.\d+$/.test(v));
+            let bumped;
+            if (versions.length === 0) {
+              bumped = '0.1.0';
+            } else {
+              versions.sort((a, b) => {
+                const [am, an, ap] = a.split('.').map(Number);
+                const [bm, bn, bp] = b.split('.').map(Number);
+                if (am !== bm) return bm - am;
+                if (an !== bn) return bn - an;
+                return bp - ap;
+              });
+              const [maj, min, pat] = versions[0].split('.').map(Number);
+              bumped = [maj, min, pat + 1].join('.');
+            }
+            core.setOutput('version', bumped);
+
+      - name: Mostrar versión generada
+        run: echo "→ VERSION = ${{ steps.getver.outputs.version }}"
+
+      # Release automático
+      - name: Crear Release en GitHub
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.getver.outputs.version }}
+          release_name: Release ${{ steps.getver.outputs.version }}
+          draft: false
+          prerelease: false
+
+      # Debug: usuarios y estado docker
+
+      - name: Verificar acceso a Docker y K3s
+        run: |
+          whoami
+          docker ps
+          sudo k3s ctr images ls
+          
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 🛠️ Build y push de imagen Docker
+        run: |
+          docker build -t developmentzarcom/webui:${{ steps.getver.outputs.version }} .
+          docker push developmentzarcom/webui:${{ steps.getver.outputs.version }}
+
+      # Opcional: Verificar que la imagen existe en docker local antes de exportar
+      - name: Verificar imagen local
+        run: |
+          docker images | grep webui
+
+      - name: Importar imagen a K3s (containerd)
+        run: |
+          docker save developmentzarcom/webui:${{ steps.getver.outputs.version }} -o webui.tar
+          sudo k3s ctr images import webui.tar
+
+      - name: Set up kubeconfig (si tu runner no lo tiene global)
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+
+      - name: Ensure namespace exists
+        run: |
+          kubectl get namespace production || kubectl create namespace production
+
+      - name: Aplicar deployment.yaml (crea si no existe, actualiza si existe)
+        run: |
+          kubectl apply -f deployment_production.yaml
+
+      - name: List deployments en production namespace (debug)
+        run: |
+          kubectl get deployments -n production
+
+      - name: Actualizar imagen en el deployment de Kubernetes
+        run: |
+          kubectl set image deployment/platform-back webui=developmentzarcom/webui:${{ steps.getver.outputs.version }} --namespace production
+
+      - name: 🔄 Rollout restart y monitoreo de status
+        run: |
+          kubectl rollout restart deployment/platform-back --namespace production
+          kubectl rollout status deployment/platform-back --namespace production --timeout=180s || \
+          kubectl get pods -n production -o name | grep platform-back | xargs -r kubectl delete --grace-period=0 --force -n production

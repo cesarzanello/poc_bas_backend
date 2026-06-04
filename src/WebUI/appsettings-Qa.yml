@@ -1,0 +1,9 @@
+Logging:
+  LogLevel:
+    Default: Information
+    Microsoft: Warning
+
+ConnectionStrings:
+  DefaultConnection: "Server=.;Database=MiDb;User Id=sa;Password=MiPass;"
+
+CORS_Origins: "http://localhost:3000" 
