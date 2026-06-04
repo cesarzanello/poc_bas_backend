@@ -1,5 +1,4 @@
 using Application.Commond.Interface;
-using Application.Commond.Interface.ITenants;
 using Application.Dtos;
 using Infrastructure.Persistence;
 using Infrastructure.Service.SProductos;
@@ -23,14 +22,9 @@ public class ProductosCommandQueryUnitOfWorkTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var tenants = new Mock<ITenantsCommandQuery>();
-        tenants
-            .Setup(x => x.ExistsTenantAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         var logger = new Mock<ILogger<ProductosCommandQuery>>();
 
-        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, tenants.Object, logger.Object);
+        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, logger.Object);
         var request = new CreateProductoRequestDto
         {
             TenantId = Guid.NewGuid(),
@@ -65,10 +59,9 @@ public class ProductosCommandQueryUnitOfWorkTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var tenants = new Mock<ITenantsCommandQuery>();
         var logger = new Mock<ILogger<ProductosCommandQuery>>();
 
-        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, tenants.Object, logger.Object);
+        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, logger.Object);
         var request = new UpdateProductoRequestDto
         {
             Codigo = "P-201",
@@ -102,10 +95,9 @@ public class ProductosCommandQueryUnitOfWorkTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var tenants = new Mock<ITenantsCommandQuery>();
         var logger = new Mock<ILogger<ProductosCommandQuery>>();
 
-        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, tenants.Object, logger.Object);
+        var sut = new ProductosCommandQuery(dbContext, unitOfWork.Object, logger.Object);
 
         await sut.DeleteProductoAsync(productoId, CancellationToken.None);
 

@@ -13,11 +13,15 @@ namespace Application.UserCase.V1.Productos.Commands
     {
         public async Task Handle(DeleteProducto request, CancellationToken cancellationToken)
         {
+            var exists = await productosCommandQuery.ExistsProductoAsync(request.ProductoId, cancellationToken);
+            if (!exists)
+                throw new KeyNotFoundException("No se encontró el producto indicado.");
+
             await productosCommandQuery.DeleteProductoAsync(request.ProductoId, cancellationToken);
 
             await notificationsFacade.BroadcastAsync(
                 "Producto eliminado",
-                $"Se elimin� el producto {request.ProductoId}.",
+                $"Se eliminó el producto {request.ProductoId}.",
                 "warning",
                 cancellationToken);
         }

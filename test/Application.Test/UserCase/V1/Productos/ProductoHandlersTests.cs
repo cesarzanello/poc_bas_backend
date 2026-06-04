@@ -1,5 +1,6 @@
 using Application.Commond.Interface;
 using Application.Commond.Interface.IProductos;
+using Application.Commond.Interface.ITenants;
 using Application.Dtos;
 using Application.UserCase.V1.Productos.Commands;
 using Application.UserCase.V1.Productos.Queries;
@@ -14,6 +15,7 @@ public class ProductoHandlersTests
     public async Task CreateProductoHandler_Should_Create_Producto_And_Broadcast()
     {
         var productos = new Mock<IProductosCommandQuery>();
+        var tenants = new Mock<ITenantsCommandQuery>();
         var notifications = new Mock<INotificationsFacade>();
         var cancellationToken = new CancellationTokenSource().Token;
 
@@ -34,13 +36,17 @@ public class ProductoHandlersTests
             Precio = request.Precio
         };
 
+        tenants
+            .Setup(x => x.ExistsTenantAsync(request.TenantId, cancellationToken))
+            .ReturnsAsync(true);
+
         Guid createdId = Guid.Empty;
         productos
             .Setup(x => x.CreateProductoAsync(It.IsAny<Guid>(), request, cancellationToken))
             .Callback<Guid, CreateProductoRequestDto, CancellationToken>((id, _, _) => createdId = id)
             .ReturnsAsync(expected);
 
-        var handler = new CreateProductoHandler(productos.Object, notifications.Object);
+        var handler = new CreateProductoHandler(productos.Object, tenants.Object, notifications.Object);
 
         var result = await handler.Handle(new CreateProducto { Request = request }, cancellationToken);
 
@@ -55,6 +61,56 @@ public class ProductoHandlersTests
     }
 
     [Fact]
+    public async Task CreateProductoHandler_Should_Throw_ArgumentException_When_TenantId_Empty()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var tenants = new Mock<ITenantsCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+
+        var handler = new CreateProductoHandler(productos.Object, tenants.Object, notifications.Object);
+        var request = new CreateProductoRequestDto { TenantId = Guid.Empty, Codigo = "P-001", Nombre = "Test", Precio = 1 };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(new CreateProducto { Request = request }, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("", "Nombre")]
+    [InlineData("   ", "Nombre")]
+    [InlineData("Codigo", "")]
+    [InlineData("Codigo", "   ")]
+    public async Task CreateProductoHandler_Should_Throw_ArgumentException_When_Codigo_Or_Nombre_Empty(string codigo, string nombre)
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var tenants = new Mock<ITenantsCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+
+        var handler = new CreateProductoHandler(productos.Object, tenants.Object, notifications.Object);
+        var request = new CreateProductoRequestDto { TenantId = Guid.NewGuid(), Codigo = codigo, Nombre = nombre, Precio = 1 };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(new CreateProducto { Request = request }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateProductoHandler_Should_Throw_KeyNotFoundException_When_Tenant_Not_Found()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var tenants = new Mock<ITenantsCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+        var cancellationToken = new CancellationTokenSource().Token;
+
+        var tenantId = Guid.NewGuid();
+        tenants.Setup(x => x.ExistsTenantAsync(tenantId, cancellationToken)).ReturnsAsync(false);
+
+        var handler = new CreateProductoHandler(productos.Object, tenants.Object, notifications.Object);
+        var request = new CreateProductoRequestDto { TenantId = tenantId, Codigo = "P-001", Nombre = "Test", Precio = 1 };
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            handler.Handle(new CreateProducto { Request = request }, cancellationToken));
+    }
+
+    [Fact]
     public async Task UpdateProductoHandler_Should_Update_Producto_And_Broadcast()
     {
         var productos = new Mock<IProductosCommandQuery>();
@@ -62,6 +118,7 @@ public class ProductoHandlersTests
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
         var updateRequest = new UpdateProductoRequestDto
         {
             Codigo = "P-002",
@@ -72,11 +129,19 @@ public class ProductoHandlersTests
         var expected = new ProductoResponseDto
         {
             Id = productoId,
-            TenantId = Guid.NewGuid(),
+            TenantId = tenantId,
             Codigo = updateRequest.Codigo,
             Nombre = updateRequest.Nombre,
             Precio = updateRequest.Precio
         };
+
+        productos
+            .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
+            .ReturnsAsync(expected);
+
+        productos
+            .Setup(x => x.ExistsCodigoForTenantAsync(tenantId, updateRequest.Codigo, productoId, cancellationToken))
+            .ReturnsAsync(false);
 
         productos
             .Setup(x => x.UpdateProductoAsync(productoId, updateRequest, cancellationToken))
@@ -96,6 +161,73 @@ public class ProductoHandlersTests
     }
 
     [Fact]
+    public async Task UpdateProductoHandler_Should_Throw_ArgumentException_When_ProductoId_Empty()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+
+        var handler = new UpdateProductoHandler(productos.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(new UpdateProducto { ProductoId = Guid.Empty, Request = new UpdateProductoRequestDto { Codigo = "C", Nombre = "N", Precio = 1 } }, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("", "Nombre")]
+    [InlineData("Codigo", "")]
+    public async Task UpdateProductoHandler_Should_Throw_ArgumentException_When_Codigo_Or_Nombre_Empty(string codigo, string nombre)
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+
+        var handler = new UpdateProductoHandler(productos.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(new UpdateProducto { ProductoId = Guid.NewGuid(), Request = new UpdateProductoRequestDto { Codigo = codigo, Nombre = nombre, Precio = 1 } }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateProductoHandler_Should_Throw_KeyNotFoundException_When_Producto_Not_Found()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+        var cancellationToken = new CancellationTokenSource().Token;
+
+        var productoId = Guid.NewGuid();
+        productos.Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken)).ReturnsAsync((ProductoResponseDto?)null);
+
+        var handler = new UpdateProductoHandler(productos.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            handler.Handle(new UpdateProducto { ProductoId = productoId, Request = new UpdateProductoRequestDto { Codigo = "C", Nombre = "N", Precio = 1 } }, cancellationToken));
+    }
+
+    [Fact]
+    public async Task UpdateProductoHandler_Should_Throw_InvalidOperationException_When_Codigo_Duplicated()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+        var cancellationToken = new CancellationTokenSource().Token;
+
+        var productoId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var request = new UpdateProductoRequestDto { Codigo = "DUP", Nombre = "Nombre", Precio = 1 };
+
+        productos
+            .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
+            .ReturnsAsync(new ProductoResponseDto { Id = productoId, TenantId = tenantId, Codigo = "OLD", Nombre = "Nombre", Precio = 1 });
+
+        productos
+            .Setup(x => x.ExistsCodigoForTenantAsync(tenantId, request.Codigo, productoId, cancellationToken))
+            .ReturnsAsync(true);
+
+        var handler = new UpdateProductoHandler(productos.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(new UpdateProducto { ProductoId = productoId, Request = request }, cancellationToken));
+    }
+
+    [Fact]
     public async Task DeleteProductoHandler_Should_Delete_Producto_And_Broadcast()
     {
         var productos = new Mock<IProductosCommandQuery>();
@@ -103,6 +235,10 @@ public class ProductoHandlersTests
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
+
+        productos
+            .Setup(x => x.ExistsProductoAsync(productoId, cancellationToken))
+            .ReturnsAsync(true);
 
         productos
             .Setup(x => x.DeleteProductoAsync(productoId, cancellationToken))
@@ -118,6 +254,22 @@ public class ProductoHandlersTests
             It.Is<string>(m => m.Contains(productoId.ToString())),
             "warning",
             cancellationToken), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteProductoHandler_Should_Throw_KeyNotFoundException_When_Producto_Not_Found()
+    {
+        var productos = new Mock<IProductosCommandQuery>();
+        var notifications = new Mock<INotificationsFacade>();
+        var cancellationToken = new CancellationTokenSource().Token;
+
+        var productoId = Guid.NewGuid();
+        productos.Setup(x => x.ExistsProductoAsync(productoId, cancellationToken)).ReturnsAsync(false);
+
+        var handler = new DeleteProductoHandler(productos.Object, notifications.Object);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            handler.Handle(new DeleteProducto { ProductoId = productoId }, cancellationToken));
     }
 
     [Fact]
