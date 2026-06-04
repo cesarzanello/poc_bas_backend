@@ -54,10 +54,12 @@ public class ProductoHandlersTests
         Assert.NotEqual(Guid.Empty, createdId);
 
         notifications.Verify(x => x.BroadcastAsync(
+            expected.TenantId,
             "Producto creado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "success",
-            cancellationToken), Times.Once);
+            cancellationToken,
+            It.Is<object?>(d => ReferenceEquals(d, expected))), Times.Once);
     }
 
     [Fact]
@@ -154,10 +156,12 @@ public class ProductoHandlersTests
         Assert.Equal(expected, result);
 
         notifications.Verify(x => x.BroadcastAsync(
+            expected.TenantId,
             "Producto actualizado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "info",
-            cancellationToken), Times.Once);
+            cancellationToken,
+            It.Is<object?>(d => ReferenceEquals(d, expected))), Times.Once);
     }
 
     [Fact]
@@ -236,9 +240,10 @@ public class ProductoHandlersTests
 
         var productoId = Guid.NewGuid();
 
+        var tenantId = Guid.NewGuid();
         productos
-            .Setup(x => x.ExistsProductoAsync(productoId, cancellationToken))
-            .ReturnsAsync(true);
+            .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
+            .ReturnsAsync(new ProductoResponseDto { Id = productoId, TenantId = tenantId, Codigo = "P-01", Nombre = "N", Precio = 1 });
 
         productos
             .Setup(x => x.DeleteProductoAsync(productoId, cancellationToken))
@@ -250,10 +255,12 @@ public class ProductoHandlersTests
 
         productos.Verify(x => x.DeleteProductoAsync(productoId, cancellationToken), Times.Once);
         notifications.Verify(x => x.BroadcastAsync(
+            tenantId,
             "Producto eliminado",
             It.Is<string>(m => m.Contains(productoId.ToString())),
             "warning",
-            cancellationToken), Times.Once);
+            cancellationToken,
+            It.Is<object?>(d => HasProductoId(d, productoId))), Times.Once);
     }
 
     [Fact]
@@ -264,7 +271,7 @@ public class ProductoHandlersTests
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
-        productos.Setup(x => x.ExistsProductoAsync(productoId, cancellationToken)).ReturnsAsync(false);
+        productos.Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken)).ReturnsAsync((ProductoResponseDto?)null);
 
         var handler = new DeleteProductoHandler(productos.Object, notifications.Object);
 
@@ -273,10 +280,9 @@ public class ProductoHandlersTests
     }
 
     [Fact]
-    public async Task GetProductoByIdHandler_Should_Return_Producto_And_Broadcast_Found_Message()
+    public async Task GetProductoByIdHandler_Should_Return_Producto()
     {
         var productos = new Mock<IProductosCommandQuery>();
-        var notifications = new Mock<INotificationsFacade>();
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
@@ -293,23 +299,17 @@ public class ProductoHandlersTests
             .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
             .ReturnsAsync(expected);
 
-        var handler = new GetProductoByIdHandler(productos.Object, notifications.Object);
+        var handler = new GetProductoByIdHandler(productos.Object);
 
         var result = await handler.Handle(new GetProductoById { ProductoId = productoId }, cancellationToken);
 
         Assert.Equal(expected, result);
-        notifications.Verify(x => x.BroadcastAsync(
-            "Producto consultado",
-            It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
-            "info",
-            cancellationToken), Times.Once);
     }
 
     [Fact]
-    public async Task GetProductoByIdHandler_Should_Return_Null_And_Broadcast_NotFound_Message()
+    public async Task GetProductoByIdHandler_Should_Return_Null()
     {
         var productos = new Mock<IProductosCommandQuery>();
-        var notifications = new Mock<INotificationsFacade>();
         var cancellationToken = new CancellationTokenSource().Token;
 
         var productoId = Guid.NewGuid();
@@ -318,23 +318,17 @@ public class ProductoHandlersTests
             .Setup(x => x.GetProductoByIdAsync(productoId, cancellationToken))
             .ReturnsAsync((ProductoResponseDto?)null);
 
-        var handler = new GetProductoByIdHandler(productos.Object, notifications.Object);
+        var handler = new GetProductoByIdHandler(productos.Object);
 
         var result = await handler.Handle(new GetProductoById { ProductoId = productoId }, cancellationToken);
 
         Assert.Null(result);
-        notifications.Verify(x => x.BroadcastAsync(
-            "Producto consultado",
-            It.Is<string>(m => m.Contains(productoId.ToString()) && m.Contains("no fue encontrado")),
-            "info",
-            cancellationToken), Times.Once);
     }
 
     [Fact]
-    public async Task GetProductosByTenantHandler_Should_Return_Items_And_Broadcast_Count()
+    public async Task GetProductosByTenantHandler_Should_Return_Items()
     {
         var productos = new Mock<IProductosCommandQuery>();
-        var notifications = new Mock<INotificationsFacade>();
         var cancellationToken = new CancellationTokenSource().Token;
 
         var tenantId = Guid.NewGuid();
@@ -348,15 +342,27 @@ public class ProductoHandlersTests
             .Setup(x => x.GetProductosByTenantAsync(tenantId, cancellationToken))
             .ReturnsAsync(expected);
 
-        var handler = new GetProductosByTenantHandler(productos.Object, notifications.Object);
+        var handler = new GetProductosByTenantHandler(productos.Object);
 
         var result = await handler.Handle(new GetProductosByTenant { TenantId = tenantId }, cancellationToken);
 
         Assert.Equal(expected, result);
-        notifications.Verify(x => x.BroadcastAsync(
-            "Productos consultados",
-            It.Is<string>(m => m.Contains("2") && m.Contains(tenantId.ToString())),
-            "info",
-            cancellationToken), Times.Once);
+    }
+
+    private static bool HasProductoId(object? data, Guid expectedId)
+    {
+        if (data is null)
+        {
+            return false;
+        }
+
+        var property = data.GetType().GetProperty("ProductoId");
+        if (property is null)
+        {
+            return false;
+        }
+
+        var value = property.GetValue(data);
+        return value is Guid id && id == expectedId;
     }
 }

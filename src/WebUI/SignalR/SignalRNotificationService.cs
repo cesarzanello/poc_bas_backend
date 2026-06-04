@@ -10,5 +10,10 @@ namespace WebUI.SignalR
         {
             return hubContext.Clients.All.SendAsync(eventName, payload, cancellationToken);
         }
+
+        public Task NotifyGroupAsync(string groupName, string eventName, object payload, CancellationToken cancellationToken = default)
+        {
+            return hubContext.Clients.Group(groupName).SendAsync(eventName, payload, cancellationToken);
+        }
     }
 }

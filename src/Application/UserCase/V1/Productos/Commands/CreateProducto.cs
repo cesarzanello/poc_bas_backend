@@ -29,10 +29,12 @@ namespace Application.UserCase.V1.Productos.Commands
             var producto = await productosCommandQuery.CreateProductoAsync(productoId, request.Request, cancellationToken);
 
             await notificationsFacade.BroadcastAsync(
+                producto.TenantId,
                 "Producto creado",
                 $"Se creó el producto {producto.Nombre} ({producto.Id}).",
                 "success",
-                cancellationToken);
+                cancellationToken,
+                producto);
 
             return producto;
         }

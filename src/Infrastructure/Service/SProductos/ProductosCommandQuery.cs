@@ -4,6 +4,7 @@ using Application.Dtos;
 using Dapper;
 using Domain.Entities;
 using Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -16,12 +17,19 @@ namespace Infrastructure.Service.SProductos
         {
             try
             {
+                var codigo = request.Codigo.Trim();
+                var nombre = request.Nombre.Trim();
+
+                var codigoDuplicado = await ExistsCodigoForTenantAsync(request.TenantId, codigo, Guid.Empty, cancellationToken);
+                if (codigoDuplicado)
+                    throw new InvalidOperationException("Ya existe un producto con el mismo código para el tenant indicado.");
+
                 var producto = new Producto
                 {
                     Id = productoId,
                     TenantId = request.TenantId,
-                    Codigo = request.Codigo,
-                    Nombre = request.Nombre,
+                    Codigo = codigo,
+                    Nombre = nombre,
                     Precio = request.Precio
                 };
 
@@ -36,6 +44,11 @@ namespace Infrastructure.Service.SProductos
                     Nombre = producto.Nombre,
                     Precio = producto.Precio
                 };
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+            {
+                logger.LogWarning(ex, "Conflicto de código duplicado al crear producto {ProductoId} para tenant {TenantId}", productoId, request.TenantId);
+                throw new InvalidOperationException("Ya existe un producto con el mismo código para el tenant indicado.", ex);
             }
             catch (Exception ex)
             {

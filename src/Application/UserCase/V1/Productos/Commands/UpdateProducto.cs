@@ -33,10 +33,12 @@ namespace Application.UserCase.V1.Productos.Commands
             var producto = await productosCommandQuery.UpdateProductoAsync(request.ProductoId, request.Request, cancellationToken);
 
             await notificationsFacade.BroadcastAsync(
+                producto.TenantId,
                 "Producto actualizado",
                 $"Se actualizó el producto {producto.Nombre} ({producto.Id}).",
                 "info",
-                cancellationToken);
+                cancellationToken,
+                producto);
 
             return producto;
         }

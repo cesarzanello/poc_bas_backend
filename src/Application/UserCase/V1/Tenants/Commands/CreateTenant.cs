@@ -21,10 +21,12 @@ namespace Application.UserCase.V1.Tenants.Commands
             var tenant = await tenantsCommandQuery.CreateTenantAsync(tenantId, request.Nombre.Trim(), cancellationToken);
 
             await notificationsFacade.BroadcastAsync(
+                tenant.Id,
                 "Tenant creado",
                 $"Se creó el tenant {tenant.Nombre} ({tenant.Id}).",
                 "success",
-                cancellationToken);
+                cancellationToken,
+                tenant);
 
             return tenant;
         }
