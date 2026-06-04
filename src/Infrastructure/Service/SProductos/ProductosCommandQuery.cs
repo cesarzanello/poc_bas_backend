@@ -1,5 +1,6 @@
 using Application.Commond.Interface.IProductos;
 using Application.Commond.Interface.ITenants;
+using Application.Commond.Interface;
 using Application.Dtos;
 using Dapper;
 using Domain.Entities;
@@ -10,7 +11,7 @@ using System.Data;
 
 namespace Infrastructure.Service.SProductos
 {
-    public class ProductosCommandQuery(ApplicationDbContext dbContext, ITenantsCommandQuery tenantsCommandQuery, ILogger<ProductosCommandQuery> logger) : IProductosCommandQuery
+    public class ProductosCommandQuery(ApplicationDbContext dbContext, IUnitOfWork unitOfWork, ITenantsCommandQuery tenantsCommandQuery, ILogger<ProductosCommandQuery> logger) : IProductosCommandQuery
     {
         public async Task<ProductoResponseDto> CreateProductoAsync(Guid productoId, CreateProductoRequestDto request, CancellationToken cancellationToken = default)
         {
@@ -33,7 +34,7 @@ namespace Infrastructure.Service.SProductos
                 };
 
                 dbContext.Productos.Add(producto);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return new ProductoResponseDto
                 {
@@ -73,7 +74,7 @@ namespace Infrastructure.Service.SProductos
                 producto.Nombre = request.Nombre;
                 producto.Precio = request.Precio;
 
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return new ProductoResponseDto
                 {
@@ -103,7 +104,7 @@ namespace Infrastructure.Service.SProductos
                 }
 
                 dbContext.Productos.Remove(producto);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {
