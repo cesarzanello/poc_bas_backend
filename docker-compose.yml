@@ -8,6 +8,17 @@ services:
       - sqlserver
       - mongodb
 
+  angular-front:
+    image: poc-bas-frontend
+    build:
+      context: ../poc_bas_frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - webui
+    ports:
+      - "4200:80"
+    restart: unless-stopped
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     restart: unless-stopped
