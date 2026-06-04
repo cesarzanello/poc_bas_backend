@@ -32,7 +32,8 @@ namespace Application.UserCase.V1.Productos.Commands
                 "Producto creado",
                 $"Se creó el producto {producto.Nombre} ({producto.Id}).",
                 "success",
-                cancellationToken);
+                cancellationToken,
+                producto);
 
             return producto;
         }

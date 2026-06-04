@@ -7,13 +7,14 @@ namespace WebUI.SignalR
     {
         private const string NotificationReceivedEvent = "notification-received";
 
-        public Task BroadcastAsync(string title, string message, string type = "info", CancellationToken cancellationToken = default)
+        public Task BroadcastAsync(string title, string message, string type = "info", CancellationToken cancellationToken = default, object? data = null)
         {
             var payload = new NotificationMessageDto
             {
                 Title = title,
                 Message = message,
-                Type = type
+                Type = type,
+                Data = data
             };
 
             return notificationService.NotifyAllAsync(NotificationReceivedEvent, payload, cancellationToken);

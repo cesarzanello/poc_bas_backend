@@ -41,7 +41,8 @@ public class TenantHandlersTests
             "Tenant creado",
             It.Is<string>(m => m.Contains(expected.Nombre) && m.Contains(expected.Id.ToString())),
             "success",
-            cancellationToken), Times.Once);
+            cancellationToken,
+            It.Is<object?>(d => ReferenceEquals(d, expected))), Times.Once);
     }
 
     [Theory]
@@ -80,10 +81,9 @@ public class TenantHandlersTests
     }
 
     [Fact]
-    public async Task GetAllTenantsHandler_Should_Return_Items_And_Broadcast_Count()
+    public async Task GetAllTenantsHandler_Should_Return_Items()
     {
         var tenants = new Mock<ITenantsCommandQuery>();
-        var notifications = new Mock<INotificationsFacade>();
         var cancellationToken = new CancellationTokenSource().Token;
 
         IReadOnlyCollection<TenantResponseDto> expected =
@@ -96,15 +96,10 @@ public class TenantHandlersTests
             .Setup(x => x.GetAllTenantsAsync(cancellationToken))
             .ReturnsAsync(expected);
 
-        var handler = new GetAllTenantsHandler(tenants.Object, notifications.Object);
+        var handler = new GetAllTenantsHandler(tenants.Object);
 
         var result = await handler.Handle(new GetAllTenants(), cancellationToken);
 
         Assert.Equal(expected, result);
-        notifications.Verify(x => x.BroadcastAsync(
-            "Tenants consultados",
-            It.Is<string>(m => m.Contains("2")),
-            "info",
-            cancellationToken), Times.Once);
     }
 }

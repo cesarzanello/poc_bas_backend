@@ -11,4 +11,4 @@ MongoDb:
   DatabaseName: "poc_bas"
   TenantsCollectionName: "tenants"
 
-CORS_Origins: "http://localhost:3000" 
+CORS_Origins: "http://localhost:4200" 

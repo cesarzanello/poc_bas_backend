@@ -7,6 +7,6 @@ namespace Application.Commond.Interface
 
     public interface INotificationsFacade
     {
-        Task BroadcastAsync(string title, string message, string type = "info", CancellationToken cancellationToken = default);
+        Task BroadcastAsync(string title, string message, string type = "info", CancellationToken cancellationToken = default, object? data = null);
     }
 }

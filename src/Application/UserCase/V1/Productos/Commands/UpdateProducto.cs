@@ -36,7 +36,8 @@ namespace Application.UserCase.V1.Productos.Commands
                 "Producto actualizado",
                 $"Se actualizó el producto {producto.Nombre} ({producto.Id}).",
                 "info",
-                cancellationToken);
+                cancellationToken,
+                producto);
 
             return producto;
         }

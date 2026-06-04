@@ -24,7 +24,8 @@ namespace Application.UserCase.V1.Tenants.Commands
                 "Tenant creado",
                 $"Se creó el tenant {tenant.Nombre} ({tenant.Id}).",
                 "success",
-                cancellationToken);
+                cancellationToken,
+                tenant);
 
             return tenant;
         }

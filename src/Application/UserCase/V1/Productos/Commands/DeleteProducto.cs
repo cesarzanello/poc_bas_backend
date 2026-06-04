@@ -23,7 +23,8 @@ namespace Application.UserCase.V1.Productos.Commands
                 "Producto eliminado",
                 $"Se eliminó el producto {request.ProductoId}.",
                 "warning",
-                cancellationToken);
+                cancellationToken,
+                new { request.ProductoId });
         }
     }
 }

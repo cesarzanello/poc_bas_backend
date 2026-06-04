@@ -34,6 +34,7 @@ builder.Services.AddCors(policy =>
         options.WithOrigins(origins.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
         options.AllowAnyHeader();
         options.AllowAnyMethod();
+        options.AllowCredentials();
     });
 });
 
