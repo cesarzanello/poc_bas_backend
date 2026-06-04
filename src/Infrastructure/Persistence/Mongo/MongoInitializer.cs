@@ -25,7 +25,45 @@ namespace Infrastructure.Persistence.Mongo
                 await mongoDatabase.CreateCollectionAsync(collectionName, cancellationToken: cancellationToken);
                 logger.LogInformation("MongoDB collection '{CollectionName}' creada.", collectionName);
             }
+
+            await EnsureDefaultTenantsAsync(collectionName, cancellationToken);
         }
+
+        private async Task EnsureDefaultTenantsAsync(string collectionName, CancellationToken cancellationToken)
+        {
+            var tenantsCollection = mongoDatabase.GetCollection<TenantDocument>(collectionName);
+
+            var existingTenantNames = await tenantsCollection
+                .Find(_ => true)
+                .Project(x => x.Nombre)
+                .ToListAsync(cancellationToken);
+
+            var tenantsToInsert = DefaultTenants
+                .Where(x => !existingTenantNames.Contains(x.Nombre, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+
+            if (tenantsToInsert.Count == 0)
+            {
+                return;
+            }
+
+            await tenantsCollection.InsertManyAsync(tenantsToInsert, cancellationToken: cancellationToken);
+            logger.LogInformation("Se crearon {Count} tenants por defecto en MongoDB.", tenantsToInsert.Count);
+        }
+
+        private static readonly IReadOnlyCollection<TenantDocument> DefaultTenants =
+        [
+            new TenantDocument
+            {
+                Id = Guid.Parse("4c00f652-6495-4d72-a8cc-25f3b6a7f0f7"),
+                Nombre = "BAS"
+            },
+            new TenantDocument
+            {
+                Id = Guid.Parse("2f1682ca-4f64-4ef9-9030-4ad4af5720d4"),
+                Nombre = "BAS-2"
+            }
+        ];
 
         private async Task WaitUntilAvailableAsync(CancellationToken cancellationToken)
         {
