@@ -7,19 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="UserCase\V1\Caso1\**" />
+    <EmbeddedResource Remove="UserCase\V1\Caso1\**" />
+    <None Remove="UserCase\V1\Caso1\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper" Version="16.1.1" />
     <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="UserCase\V1\Caso1\Commond\Create\" />
-    <Folder Include="UserCase\V1\Caso1\Commond\Delete\" />
-    <Folder Include="UserCase\V1\Caso1\Commond\Update\" />
-    <Folder Include="UserCase\V1\Caso1\Queries\" />
   </ItemGroup>
 
 </Project>
